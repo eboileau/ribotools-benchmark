@@ -1,0 +1,5 @@
+name: env_orfik
+channels:
+  - bioconda
+dependencies:
+  - bioconductor-orfik=1.30.2

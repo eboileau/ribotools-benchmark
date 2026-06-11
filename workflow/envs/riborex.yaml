@@ -1,0 +1,5 @@
+name: env_riborex
+channels:
+  - bioconda
+dependencies:
+  - r-riborex=2.4.0

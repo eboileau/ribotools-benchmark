@@ -1,0 +1,44 @@
+# emacs -*- mode: gitignore; -*-
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# emacs projectiles files
+.projectile
+
+# directory configuration
+.dir-locals.el
+
+# backup
+*.bak
+*.gho
+*.ori
+*.orig
+*.tmp
+
+# Swap
+.*.kate-swp
+.swp.*
+
+# Swap - Vim
+[._]*.s[a-v][a-z]
+# !*.svg
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+# Session
+Session.vim
+Sessionx.vim
+
+# Snakemake
+.snakemake*
+
+# Projetc specific
+local/
+logs/

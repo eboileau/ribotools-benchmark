@@ -1,0 +1,17 @@
+sampleName,assay,condition
+control_1_poly,ribo,control
+control_2_poly,ribo,control
+control_3_poly,ribo,control
+control_4_poly,ribo,control
+treatment_1_poly,ribo,treatment
+treatment_2_poly,ribo,treatment
+treatment_3_poly,ribo,treatment
+treatment_4_poly,ribo,treatment
+control_1_cyto,rna,control
+control_2_cyto,rna,control
+control_3_cyto,rna,control
+control_4_cyto,rna,control
+treatment_1_cyto,rna,treatment
+treatment_2_cyto,rna,treatment
+treatment_3_cyto,rna,treatment
+treatment_4_cyto,rna,treatment

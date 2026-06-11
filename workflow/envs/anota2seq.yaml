@@ -1,0 +1,5 @@
+name: env_anota2seq
+channels:
+  - bioconda
+dependencies:
+  - bioconductor-anota2seq=1.32.0

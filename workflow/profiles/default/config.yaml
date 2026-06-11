@@ -1,0 +1,16 @@
+snakefile: workflow/Snakefile
+use-conda: true
+cores: 4
+jobs: 2
+default-resources:
+  mem_mb: 8000
+  tmpdir: "/tmp"
+set-threads:
+  run_Oertlin: 1
+  run_Boileau: 1
+resources:
+  mem_mb: 16000
+printshellcmds: true
+rerun-incomplete: true
+keep-going: false
+latency-wait: 30

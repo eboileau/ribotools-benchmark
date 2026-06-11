@@ -1,0 +1,5 @@
+name: env_xtail
+channels:
+  - bioconda
+dependencies:
+  - xtail=1.1.5

@@ -1,0 +1,33 @@
+# Snakemake workdir - environments and output are written to this directory
+output_directory: /prj/rpbp-dev/Maja_data_hIPSC_diff/comparison/benchmark
+
+# Tools to benchmark
+tools:
+  - anota2seq
+  # - xtail
+  - riborex
+  - deltate
+  - orfik
+  - ribotools
+
+# Input data
+data:
+  benchmark1:
+    ribo: "data/Oertlin/ribo_counts.csv"
+    rna: "data/Oertlin/rna_counts.csv"
+    samples: "data/Oertlin/samples.csv"
+  benchmark2:
+    ribo: "data/Boileau/ribo_counts.csv"
+    rna: "data/Boileau/rna_counts.csv"
+    samples: "data/Boileau/samples.csv"
+
+# Benchmarks - match input data and Snakemake rules
+benchmarks:
+  - "benchmark1"
+  - "benchmark2"
+
+# TEA
+params:
+  fdr_threshold: 0.05
+  n_permutations: 10 # for Stage 2 null permutation
+
