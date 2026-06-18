@@ -17,10 +17,15 @@ def get_input(wildcards, results):
         "samples": basedir.parent / config["data"][results]["samples"],
     }
 
+# rule all:
+#     input:
+#         expand("{benchmark}/results/{tool}/results.txt", tool=TOOLS, benchmark=BENCHMARKS),
+#         expand("{benchmark}/results/{tool}/benchmark.txt", tool=TOOLS, benchmark=BENCHMARKS)
+
 rule all:
     input:
-        expand("{benchmark}/results/{tool}/results.txt", tool=TOOLS, benchmark=BENCHMARKS),
-        expand("{benchmark}/results/{tool}/benchmark.txt", tool=TOOLS, benchmark=BENCHMARKS)
+        expand("benchmark1/results/{tool}/results.txt", tool=TOOLS),
+        expand("benchmark1/results/{tool}/benchmark.txt", tool=TOOLS)
 
 rule run_benchmark1:
     input:
@@ -33,6 +38,7 @@ rule run_benchmark1:
     pathvars:
         results = "benchmark1"
     params:
+        fdr = config["params"]["benchmark1"]["fdr_threshold"],
         script_dir = basedir / "scripts",
         script = lambda wildcards: basedir / "scripts" / f"run_{wildcards.tool}.R"
     conda:
@@ -52,41 +58,42 @@ rule run_benchmark1:
             --rna {input.rna} \
             --samples {input.samples} \
             --out {output.csv} \
+            --alpha {params.fdr}
             &> {log}
         """
 
-rule run_benchmark2:
-    input:
-        unpack(lambda wildcards: get_input(wildcards, results="benchmark2"))
-    output:
-        csv = "<results>/results/{tool}/results.txt",
-        bench = "<results>/results/{tool}/benchmark.txt"
-    log:
-        "<results>/logs/{tool}.log"
-    pathvars:
-        results = "benchmark2"
-    params:
-        script_dir = basedir / "scripts",
-        script = lambda wildcards: basedir / "scripts" / f"run_{wildcards.tool}.R"
-    conda:
-        lambda wildcards: str(basedir / "envs" / f"{wildcards.tool}.yaml")
-    shell:
-        """
-        export SCRIPT_DIR={params.script_dir}
-        export OMP_NUM_THREADS={threads}
-        export OPENBLAS_NUM_THREADS={threads}
-        export MKL_NUM_THREADS={threads}
-        export BLAS_NUM_THREADS={threads}
-        MEM_KB=$(( {resources.mem_mb} * 1024 ))
-        ulimit -v $MEM_KB
-        /usr/bin/time -v -o {output.bench} \
-        Rscript {params.script} \
-            --ribo {input.ribo} \
-            --rna {input.rna} \
-            --samples {input.samples} \
-            --out {output.csv} \
-            &> {log}
-        """
+# rule run_benchmark2:
+#     input:
+#         unpack(lambda wildcards: get_input(wildcards, results="benchmark2"))
+#     output:
+#         csv = "<results>/results/{tool}/results.txt",
+#         bench = "<results>/results/{tool}/benchmark.txt"
+#     log:
+#         "<results>/logs/{tool}.log"
+#     pathvars:
+#         results = "benchmark2"
+#     params:
+#         script_dir = basedir / "scripts",
+#         script = lambda wildcards: basedir / "scripts" / f"run_{wildcards.tool}.R"
+#     conda:
+#         lambda wildcards: str(basedir / "envs" / f"{wildcards.tool}.yaml")
+#     shell:
+#         """
+#         export SCRIPT_DIR={params.script_dir}
+#         export OMP_NUM_THREADS={threads}
+#         export OPENBLAS_NUM_THREADS={threads}
+#         export MKL_NUM_THREADS={threads}
+#         export BLAS_NUM_THREADS={threads}
+#         MEM_KB=$(( {resources.mem_mb} * 1024 ))
+#         ulimit -v $MEM_KB
+#         /usr/bin/time -v -o {output.bench} \
+#         Rscript {params.script} \
+#             --ribo {input.ribo} \
+#             --rna {input.rna} \
+#             --samples {input.samples} \
+#             --out {output.csv} \
+#             &> {log}
+#         """
 
 # ── Benchmarking wrapper (time + RAM via /usr/bin/time) ──
 

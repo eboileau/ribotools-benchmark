@@ -1,0 +1,5 @@
+name: env_ribotools_lrt
+channels:
+  - bioconda
+dependencies:
+  - ribotools=2.0.0

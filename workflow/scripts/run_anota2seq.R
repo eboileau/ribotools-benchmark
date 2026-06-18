@@ -5,8 +5,8 @@ opts <- parse_args()
 
 library(anota2seq)
 
-ribo_counts <- as.matrix(read.csv(opts$ribo, row.names = 1, check.names = FALSE))
-rna_counts  <- as.matrix(read.csv(opts$rna, row.names = 1, check.names = FALSE))
+ribo <- as.matrix(read.csv(opts$ribo, row.names = 1, check.names = FALSE))
+rna  <- as.matrix(read.csv(opts$rna, row.names = 1, check.names = FALSE))
 samples <- read.csv(opts$samples)
 
 # phenoVec must describe the sample class for corresponding columns in dataT and dataP
@@ -15,8 +15,8 @@ condition <- factor(samples$condition[samples$assay=="ribo"])
 
 # defaults - filterZeroGenes should have no effect on the simulated data
 ads <- anota2seqDataSetFromMatrix(
-  dataP = ribo_counts,
-  dataT = rna_counts,
+  dataP = ribo,
+  dataT = rna,
   phenoVec = condition,
   dataType = "RNAseq",
   normalize = TRUE,
@@ -28,7 +28,7 @@ ads <- anota2seqDataSetFromMatrix(
 ads <- anota2seqRun(
   Anota2seqDataSet = ads,
   thresholds = list(
-    maxPAdj = 0.05,
+    maxPAdj = as.numeric(opts$alpha),
     minEff = NULL
   ),
 )

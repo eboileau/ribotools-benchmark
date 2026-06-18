@@ -1,4 +1,4 @@
-name: env_ribotools
+name: env_ribotools_dte
 channels:
   - bioconda
 dependencies:
