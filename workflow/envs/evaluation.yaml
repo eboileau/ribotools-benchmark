@@ -1,0 +1,11 @@
+name: evaluation
+channels:
+  - conda-forge
+dependencies:
+  - r-base
+  - r-proc
+  - r-ggplot2
+  - r-dplyr
+  - r-tidyr
+  - r-purrr
+  - r-rcolorbrewer
