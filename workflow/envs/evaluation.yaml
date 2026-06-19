@@ -9,3 +9,4 @@ dependencies:
   - r-tidyr
   - r-purrr
   - r-rcolorbrewer
+  - r-svglite

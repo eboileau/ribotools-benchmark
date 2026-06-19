@@ -9,12 +9,17 @@ tools:
   - ribotools_lrt
   - ribotools_dte
 
-# Input data
+# Input data (relative to parent, or absolute)
 data:
   benchmark1:
     ribo: "data/Oertlin/ribo_counts.csv"
     rna: "data/Oertlin/rna_counts.csv"
     samples: "data/Oertlin/samples.csv"
+    # labels must match evaluation script
+    groundtruth:
+      translation: "data/Oertlin/translation.txt"
+      abundance: "data/Oertlin/abundance.txt"
+      buffering: "data/Oertlin/buffering.txt"
   benchmark2:
     ribo: "data/Boileau/ribo_counts.csv"
     rna: "data/Boileau/rna_counts.csv"

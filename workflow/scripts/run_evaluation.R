@@ -1,6 +1,18 @@
 #!/usr/bin/env Rscript --vanilla
 
-# Benchmarking: evaluate performance across 4 test cases (see below for description)
+# Benchmarking: 
+# Evaluate performance across 4 test cases (see below for description of each case)
+
+# Part A: Detection (ROC/AUC, all tools)
+# - results.csv: AUC + 95% CI per tool x test case
+# - stats.csv: per-tool gene coverage/patching summary 
+# - roc_curves: ROC panel
+# - auc_barplot: AUC barplot with CIs
+
+# Part B: Classification (classifying tools only)
+# - classification_metrics.csv: per-tool x per-class metrics
+# - confusion_matrices: confusion matrix heatmap
+# - classification_metrics: per-class F1, MCC bar chart
 
 # Input - output from run_tool.R
 # ------------------------------
@@ -36,22 +48,22 @@ test_cases <- list(
   translation_strict = list(
     label = "Translation (strict)",
     tp_cls = "translation",
-    tn_cls = c("background", "abundance", "buffering"),
+    tn_cls = c("background", "abundance", "buffering")
   ),
   translation_only = list(
     label = "Translation (only)",
     tp_cls = "translation",
-    tn_cls = "background",
+    tn_cls = "background"
   ),
   any_regulated = list(
     label = "Any regulated",
     tp_cls = c("translation", "abundance", "buffering"),
-    tn_cls = "background",
+    tn_cls = "background"
   ),
   buffering = list(
     label = "Buffering",
     tp_cls = "buffering",
-    tn_cls = c("background", "translation", "abundance"),
+    tn_cls = c("background", "translation", "abundance")
   )
 )
 
@@ -118,8 +130,7 @@ write.csv(stats, file.path(opts$out, "stats.csv"), row.names = FALSE, quote = FA
 
 stopifnot(length(unique(map_int(data, nrow))) == 1)
 
-## A. ROC + AUC - all tools
-# does a tool's score rank true regulated genes above background? (no class)
+## Part A. ROC + AUC - all tools
 
 compute_roc <- function(df, tc) {
   eval_df <- df %>%
@@ -169,7 +180,7 @@ final_results <- imap_dfr(evaluation, function(tc_list, tool_nm) {
   })
 })
 
-write.csv(final_results, file.path(opts$out, "final_results.csv"), row.names = FALSE, quote = FALSE)
+write.csv(final_results, file.path(opts$out, "results.csv"), row.names = FALSE, quote = FALSE)
 
 roc_df <- imap_dfr(evaluation, function(tc_list, tool_nm) {
   imap_dfr(tc_list, function(res, tc_nm) {
@@ -185,42 +196,55 @@ roc_df <- imap_dfr(evaluation, function(tc_list, tool_nm) {
   })
 })
 
+
+# color settings
+n_tools <- length(tool_files)
+if (n_tools <= 8) {
+  tool_colours <- setNames(
+    RColorBrewer::brewer.pal(max(3, n_tools), "Dark2")[seq_len(n_tools)],
+    names(tool_files)
+  )
+} else {
+  tool_colours <- setNames(
+    colorRampPalette(RColorBrewer::brewer.pal(8, "Dark2"))(n_tools),
+    names(tool_files)
+  )
+}
+
 auc_labels <- final_results %>%
   filter(!is.na(auc)) %>%
-  mutate(legend_label = sprintf(
-    "%s  (AUC\u202f=\u202f%.3f\u202f[%.3f\u2013%.3f])",
-    tool, auc, ci_lower, ci_upper
-))
-
+  mutate(auc_text = sprintf("AUC = %.3f [%.3f\u2013%.3f]", auc, ci_lower, ci_upper))
+  
 tc_order <- map_chr(test_cases, "label")
 roc_df <- roc_df %>%
-  left_join(auc_labels %>% select(tool, test_case, legend_label),
-            by = c("tool", "test_case")) %>%
-  mutate(test_label = factor(test_label, levels = tc_order))
-  
-# colors... adjust for more tools.
-n_tools <- length(tool_files)
-  tool_colours <- setNames(
-  RColorBrewer::brewer.pal(max(3, n_tools), "Dark2")[seq_len(n_tools)],
-  names(tool_files)
-)
-legend_colour_map <- auc_labels %>%
-  select(tool, legend_label) %>%
-  distinct() %>%
-  mutate(colour = tool_colours[tool]) %>%
-  { setNames(.$colour, .$legend_label) }
+  mutate(
+    tool = factor(tool, levels = names(tool_files)),
+    test_label = factor(test_label, levels = tc_order)
+  )  
 
+auc_text_df <- auc_labels %>%
+  mutate(test_label = factor(test_label, levels = tc_order)) %>%
+  group_by(test_label) %>%
+  arrange(desc(auc), .by_group = TRUE) %>%
+  mutate(y_pos = 0.3 - (row_number() - 1) * 0.07) %>%
+  ungroup() %>%
+  mutate(tool = factor(tool, levels = names(tool_files)))
+  
 # plot ROC
 # Error bars: 95% CI (delong), gene universe: full set genes (missing padded with score=0)
 # score: -log10(adjpval)
 p_roc <- ggplot(roc_df, aes(x = fpr, y = tpr,
-                            colour = legend_label,
+                            colour = tool,
                             group = tool)) +
   geom_abline(slope = 1, intercept = 0,
               linetype = "dashed", colour = "grey60", linewidth = 0.4) +
   geom_line(linewidth = 0.85, alpha = 0.9) +
+  geom_text(data = auc_text_df,
+            aes(x = 0.98, y = y_pos, label = auc_text, colour = tool),
+            inherit.aes = FALSE, hjust = 1, size = 2.6, fontface = "bold",
+            show.legend = FALSE) +
   facet_wrap(~ test_label, nrow = 2, ncol = 2) +
-  scale_colour_manual(values = legend_colour_map, name = NULL) +
+  scale_colour_manual(values = tool_colours, name = "Tool") +
   scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
                      expand = expansion(mult = 0.02)) +
   scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
@@ -232,18 +256,19 @@ p_roc <- ggplot(roc_df, aes(x = fpr, y = tpr,
   coord_equal() +
   theme_bw(base_size = 11) +
   theme(
-    legend.position = "bottom",
+    legend.position = "right",
     legend.text = element_text(size = 8),
     legend.key.width = unit(1.5, "cm"),
-    strip.background = element_rect(fill = "grey92"),
-    strip.text = element_text(face = "bold", size = 10),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 12),
     panel.grid.minor = element_blank(),
-    plot.title = element_text(face = "bold")
+    panel.spacing = unit(0.5, 'cm'),
   ) +
   guides(colour = guide_legend(ncol = 1))
   
-# ggsave("roc.pdf", p_roc, width = 12, height = 9, device = "pdf")
-  
+ggsave(file.path(opts$out, "roc_curves.svg"), p_roc, width = 12, height = 9)
+ggsave(file.path(opts$out, "roc_curves.png"), p_roc, width = 12, height = 9)
+
 # plot AUC
 # Error bars: 95% CI (delong), gene universe: full set genes (missing padded with score=0)
 bar_df <- final_results %>%
@@ -276,16 +301,17 @@ p_bar <- ggplot(bar_df,
   theme_bw(base_size = 11) +
   theme(
     axis.text.x = element_text(angle = 35, hjust = 1, size = 9),
-    strip.background = element_rect(fill = "grey92"),
-    strip.text = element_text(face = "bold", size = 10),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 12),
     panel.grid.major.x = element_blank(),
     panel.grid.minor = element_blank(),
-    plot.title = element_text(face = "bold")
+    panel.spacing = unit(0.5, 'cm')
   )
   
-# ggsave("bars.pdf", p_bar, width = 12, height = 9, device = "pdf")
-   
-## B. CLASSIFICATION - only tools that output a class label
+ggsave(file.path(opts$out, "auc_barplot.svg"), p_bar, width = 12, height = 9)
+ggsave(file.path(opts$out, "auc_barplot.png"), p_bar, width = 12, height = 9)
+
+## Part B. classification - only tools that output a class label
 # per-class precision/recall/F1/MCC
 
 # binary MCC for one class vs rest
@@ -327,7 +353,7 @@ class_metrics <- function(pred, truth, levels) {
   
 cls_metrics_df <- map_dfr(class_tools, function(tool_nm) {
   df <- data[[tool_nm]]
-  # map class values to levels - names must match
+  # map class values to levels - names must match!
   pred <- df$class
   truth <- df$gt_class
   metrics <- class_metrics(pred, truth, class_levels)
@@ -337,10 +363,10 @@ cls_metrics_df <- map_dfr(class_tools, function(tool_nm) {
   select(tool, class, n_truth, n_pred, TP, FP, TN, FN,
         precision, recall, F1, MCC)
            
-write.csv(stats, file.path(opts$out, "classification_metrics.csv"), row.names = FALSE, quote = FALSE)
+write.csv(cls_metrics_df, file.path(opts$out, "classification_metrics.csv"), row.names = FALSE, quote = FALSE)
 
 # plot confution matrices
-# Cell = count (% of column / truth class). Diagonal = correct calls
+# Cell = count (% of column / truth class)
 cm_long <- map_dfr(class_tools, function(tool_nm) {
     df    <- data[[tool_nm]]
     pred  <- factor(df$class, levels = class_levels)
@@ -374,19 +400,17 @@ p_cm <- ggplot(cm_long, aes(x = Truth, y = Predicted, fill = pct)) +
   ) +
   theme_bw(base_size = 11) +
   theme(
-    axis.text.x = element_text(angle = 35, hjust = 1),
-    strip.background = element_rect(fill = "grey92"),
-    strip.text = element_text(face = "bold", size = 10),
+    axis.text.x = element_text(angle = 35, hjust = 1, size = 9),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 12),
     panel.grid = element_blank(),
-    plot.title = element_text(face = "bold")
+    panel.spacing = unit(0.5, 'cm')
   )
 
 n_ct <- length(class_tools)
-# ggsave("confusion_matrices.pdf", p_cm,
-#          width  = max(6, 4 * n_ct),
-#          height = 5,
-#          device = "pdf")
-         
+ggsave(file.path(opts$out, "confusion_matrices.svg"), p_cm, width  = max(6, 4 * n_ct), height = 5)
+ggsave(file.path(opts$out, "confusion_matrices.png"), p_cm, width  = max(6, 4 * n_ct), height = 5)         
+
 # plot bars F1 and MCC
 # F1: harmonic mean of precision & recall
 # MCC: Matthews Correlation Coefficient (robust to class imbalance) - e.g. background
@@ -413,16 +437,13 @@ p_metrics <- ggplot(metrics_long,
   ) +
   theme_bw(base_size = 11) +
   theme(
-    axis.text.x = element_text(angle = 35, hjust = 1, size = 8),
-    strip.background = element_rect(fill = "grey92"),
-    strip.text = element_text(face = "bold", size = 9),
+    axis.text.x = element_text(angle = 35, hjust = 1, size = 9),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold", size = 12),
     panel.grid.major.x = element_blank(),
     panel.grid.minor = element_blank(),
-    plot.title = element_text(face = "bold"),
-    plot.subtitle = element_text(size = 8)
+    panel.spacing = unit(0.5, 'cm')
   )
 
-# ggsave("classification_metrics.pdf", p_metrics,
-#          width  = max(8, 2.5 * length(class_levels)),
-#          height = 6,
-#          device = "pdf")
+ggsave(file.path(opts$out, "classification_metrics.svg"), p_metrics, width  = max(8, 2.5 * length(class_levels)), height = 6)
+ggsave(file.path(opts$out, "classification_metrics.png"), p_metrics, width  = max(8, 2.5 * length(class_levels)), height = 6)

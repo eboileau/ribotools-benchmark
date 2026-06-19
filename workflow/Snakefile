@@ -24,14 +24,19 @@ def get_input(wildcards, results):
 
 rule all:
     input:
-        expand("benchmark1/results/{tool}/results.txt", tool=TOOLS),
-        expand("benchmark1/results/{tool}/benchmark.txt", tool=TOOLS)
+        "benchmark1/evaluation/results.csv",
+        "benchmark1/evaluation/stats.csv",
+        "benchmark1/evaluation/classification_metrics.csv",
+        multiext("benchmark1/evaluation/roc_curves", ".svg", ".png"),
+        multiext("benchmark1/evaluation/auc_barplot", ".svg", ".png"),
+        multiext("benchmark1/evaluation/confusion_matrices", ".svg", ".png"),
+        multiext("benchmark1/evaluation/classification_metrics", ".svg", ".png")
 
 rule run_benchmark1:
     input:
         unpack(lambda wildcards: get_input(wildcards, results="benchmark1"))
     output:
-        csv = "<results>/results/{tool}/results.txt",
+        csv = "<results>/results/{tool}/results.csv",
         bench = "<results>/results/{tool}/benchmark.txt"
     log:
         "<results>/logs/{tool}.log"
@@ -58,8 +63,44 @@ rule run_benchmark1:
             --rna {input.rna} \
             --samples {input.samples} \
             --out {output.csv} \
-            --alpha {params.fdr}
-            &> {log}
+            --alpha {params.fdr} &> {log}
+        """
+
+rule evaluate_benchmark1:
+    input:
+        ref_genes = basedir.parent / config["data"]["benchmark1"]["rna"],
+        gt_tran = basedir.parent / config["data"]["benchmark1"]["groundtruth"]["translation"],
+        gt_abun = basedir.parent / config["data"]["benchmark1"]["groundtruth"]["abundance"],
+        gt_buff = basedir.parent / config["data"]["benchmark1"]["groundtruth"]["buffering"],
+        csvs = expand("<results>/results/{tool}/results.csv", tool=TOOLS)
+    output:
+        summary = "<results>/evaluation/results.csv",
+        stats = "<results>/evaluation/stats.csv",
+        cls_metrics = "<results>/evaluation/classification_metrics.csv",
+        roc = multiext("<results>/evaluation/roc_curves", ".svg", ".png"),
+        auc = multiext("<results>/evaluation/auc_barplot", ".svg", ".png"),
+        mat = multiext("<results>/evaluation/confusion_matrices", ".svg", ".png"),
+        cls = multiext("<results>/evaluation/classification_metrics", ".svg", ".png")
+    log:
+        "<results>/logs/evaluation.log"
+    pathvars:
+        results = "benchmark1"
+    params:
+        dir = subpath(output.summary, parent=True),
+        script_dir = basedir / "scripts",
+        script = basedir / "scripts" / "run_evaluation.R"
+    conda:
+        basedir / "envs" / "evaluation.yaml"
+    shell:
+        """
+        export SCRIPT_DIR={params.script_dir}
+        Rscript --vanilla {params.script} \
+            --rna {input.ref_genes} \
+            --translation {input.gt_tran} \
+            --abundance {input.gt_abun} \
+            --buffering {input.gt_buff} \
+            --results {input.csvs} \
+            --out {params.dir} &> {log}
         """
 
 # rule run_benchmark2:
@@ -94,53 +135,3 @@ rule run_benchmark1:
 #             --out {output.csv} \
 #             &> {log}
 #         """
-
-# ── Benchmarking wrapper (time + RAM via /usr/bin/time) ──
-
-# rule run_r_tool_timed:
-#     input:
-#         ribo   = config["data"]["ribo"],
-#         rna    = config["data"]["rna"],
-#         labels = config["data"]["labels"]
-#     output:
-#         csv   = "results/{tool}/results.csv",
-#         bench = "results/{tool}/benchmark.txt"
-#     log:
-#         "logs/{tool}.log"
-#     conda:
-#         "envs/{tool}.yaml"
-#     wildcard_constraints:
-#         tool = "xtail|anota2seq|deltate|orfik|tRanslatome"
-#     shell:
-#         """
-#         /usr/bin/time -v \
-#             Rscript scripts/run_{wildcards.tool}.R \
-#                 --ribo   {input.ribo}   \
-#                 --rna    {input.rna}    \
-#                 --labels {input.labels} \
-#                 --out    {output.csv}   \
-#             > {log} 2>&1 \
-#             2> {output.bench}
-
-# ── Aggregation ──────────────────────────────────────────
-
-# rule aggregate:
-#     input:
-#         csvs   = expand("results/{tool}/results.csv", tool=TOOLS),
-#         labels = config["data"]["labels"]
-#     output:
-#         summary = "results/benchmark_summary.pdf",
-#         table   = "results/benchmark_table.csv"
-#     conda:
-#         "envs/aggregate.yaml"      # has pROC, PRROC, ggplot2, data.table
-#     shell:
-#         """
-#         Rscript scripts/aggregate_results.R \
-#             --results_dir results/ \
-#             --tools       {params.tools} \
-#             --labels      {input.labels} \
-#             --out_pdf     {output.summary} \
-#             --out_csv     {output.table}
-#         """
-#     params:
-#         tools = " ".join(TOOLS)
