@@ -29,7 +29,14 @@ To configure this workflow, modify the following files:
 
 + [config/config.yaml](config/config.yaml): workflow-specific parameters
 
-This use case is self-documenting. If you want to add a new tool to the benchmark, update the configuration file, add an environment file *e.g.* [workflow/envs/ribotools.yaml](workflow/envs/ribotools.yaml) and a corresponding script *e.g.* [workflow/scripts/run_ribotools](workflow/scripts/run_ribotools.R). More complex use cases may require additional modifications. Community contributions are welcome.
+This use case is self-documenting. If you want to add a new tool to the benchmark, update the configuration file, add an environment file *e.g.* [workflow/envs/ribotools.yaml](workflow/envs/ribotools.yaml) and a corresponding script *e.g.* [workflow/scripts/run_ribotools](workflow/scripts/run_ribotools.R).
+
+#### Developer hints
+
+While benchmark rules can handle any number of tools, each tool must be called by a dedicated R script with strict I/O formatting guidelines.
+Each benchmark is associated with specific input data and parameters, which must match rule descriptions and evaluation scripts. More complex use cases may require additional modifications. For more hints, consult [docs/DESCRIPTION.md](docs/DESCRIPTION.md).
+
+Community contributions are welcome.
 
 #### Profile
 
