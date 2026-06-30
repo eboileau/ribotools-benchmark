@@ -21,9 +21,9 @@ The output must be a csv table with the following columns
 | effect | log2 fold change or equivalent effect size |
 | score | -log10(adjusted p-value) |
 
-The class terminology is fixed according to the **anota2seq** labels. Hence, *translation* corresponds to *exclusive*, *abundance* to *forwarded, and *buffering* to *buffered*. The *intensified* class is considered a sub-case of the mRNA abundance class, where the interaction term is non-zero and amplifies the RNA change. Features classified as *intensified* by **Ribotools** and **deltaTE** are thus re-labeled as *abundance*.
+The class terminology is fixed according to the **anota2seq** labels. Hence, *translation* corresponds to *exclusive*, *abundance* to *forwarded*, and *buffering* to *buffered*. The *intensified* class is considered a sub-case of the mRNA abundance class, where the interaction term is non-zero and amplifies the RNA change. Features classified as *intensified* by **Ribotools** and **deltaTE** are thus re-labeled as *abundance*.
 
-The choice of effect size and score depends on the methodology and class, *e.g.* for **Ribotools**, we use the interaction fold change and adjusted p-value, except for features in the *forwarded* and *buffered* classes, where the RNA fold change and p-value are used. For **anota2seq**, we use the native classification, given by `singleRegMode` (`anota2seqGetOutput` with `output="singleDf"`), to assign corresponding values for `apvEff` and `apvRvmPAdj`. Riborex provides no classification; all significant features are assigned to the *translation* class. Non significant features are assigned to the *background* class.
+The choice of effect size and score depends on the methodology and class, *e.g.* for **Ribotools**, we use the interaction fold change and adjusted p-value, except for features in the *forwarded* and *buffered* classes, where the RNA fold change and adjusted p-value are used. For **anota2seq**, we use the native classification, given by `singleRegMode` (`anota2seqGetOutput` with `output="singleDf"`), to assign corresponding values for `apvEff` and `apvRvmPAdj`. Riborex provides no classification; all significant features are assigned to the *translation* class. Non significant features are assigned to the *background* class.
 
 ### Notes
 
@@ -31,6 +31,7 @@ The choice of effect size and score depends on the methodology and class, *e.g.*
 * We use `fdr_threshold=0.1` and a default effect size of zero because neither **Riborex** nor the original implementation of the **deltaTE** method accept these parameters as input. DESeq2 is the default **Riborex** engine and is also used by **deltaTE**. In DESeq2, the default is to test that the log2 fold changes are equal to zero at a significance cutoff of 0.1.
 * Effect size filtering `minEff` in **anota2seq** is applied post-hoc (after evaluating statistical significance), and is not directly comparable to the DESeq2 `lfcThreshold`. We set it to `minEff=NULL`.
 * **anota2seq** and **Riborex** provide functions that must be integrated into an R script. **deltaTE** is not a tool *per se* (it cannot be installed); the script was taken from GitHub (master branch, commit 60b61ca, Apr. 2021) and patched to handle different conditions. **Ribotools** is a CLI-tool invoked with command-line options; the associated R script formats the input/output as expected, and calls **Ribotools** using `system2`. Values for `--alpha` and `--lfcThreshold` are passed via command-line arguments.
+* The tested contrasts `control` *vs.* `treatment` use the default ordering of factor levels.
 
 ### Evaluation
 

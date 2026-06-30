@@ -6,9 +6,11 @@ configfile: "config/config.yaml"
 workdir: config["output_directory"]
 basedir = Path(workflow.basedir)
 
-TOOLS = config["tools"]
+TOOLS_1= config["tools"]
+TOOLS_2 = [t for t in TOOLS_1 if t not in config["params"]["benchmark2"]["exclude"]]
 BENCHMARKS = config["benchmarks"]
 
+N_PERM = config["params"]["benchmark2"]["n_permutations"]
 
 def get_input(wildcards, results):
     return {
@@ -19,8 +21,8 @@ def get_input(wildcards, results):
 
 # rule all:
 #     input:
-#         expand("{benchmark}/results/{tool}/results.txt", tool=TOOLS, benchmark=BENCHMARKS),
-#         expand("{benchmark}/results/{tool}/benchmark.txt", tool=TOOLS, benchmark=BENCHMARKS)
+#         expand("{benchmark}/results/{tool}/results.txt", tool=TOOLS_1, benchmark=BENCHMARKS),
+#         expand("{benchmark}/results/{tool}/benchmark.txt", tool=TOOLS_1, benchmark=BENCHMARKS)
 
 rule all:
     input:
@@ -30,7 +32,8 @@ rule all:
         multiext("benchmark1/evaluation/roc_curves", ".svg", ".png"),
         multiext("benchmark1/evaluation/auc_barplot", ".svg", ".png"),
         multiext("benchmark1/evaluation/confusion_matrices", ".svg", ".png"),
-        multiext("benchmark1/evaluation/classification_metrics", ".svg", ".png")
+        multiext("benchmark1/evaluation/classification_metrics", ".svg", ".png"),
+        "benchmark2/evaluation/results.csv",
 
 rule run_benchmark1:
     input:
@@ -72,7 +75,7 @@ rule evaluate_benchmark1:
         gt_tran = basedir.parent / config["data"]["benchmark1"]["groundtruth"]["translation"],
         gt_abun = basedir.parent / config["data"]["benchmark1"]["groundtruth"]["abundance"],
         gt_buff = basedir.parent / config["data"]["benchmark1"]["groundtruth"]["buffering"],
-        csvs = expand("<results>/results/{tool}/results.csv", tool=TOOLS)
+        csvs = expand("<results>/results/{tool}/results.csv", tool=TOOLS_1)
     output:
         summary = "<results>/evaluation/results.csv",
         stats = "<results>/evaluation/stats.csv",
@@ -103,35 +106,31 @@ rule evaluate_benchmark1:
             --out {params.dir} &> {log}
         """
 
-# rule run_benchmark2:
-#     input:
-#         unpack(lambda wildcards: get_input(wildcards, results="benchmark2"))
-#     output:
-#         csv = "<results>/results/{tool}/results.txt",
-#         bench = "<results>/results/{tool}/benchmark.txt"
-#     log:
-#         "<results>/logs/{tool}.log"
-#     pathvars:
-#         results = "benchmark2"
-#     params:
-#         script_dir = basedir / "scripts",
-#         script = lambda wildcards: basedir / "scripts" / f"run_{wildcards.tool}.R"
-#     conda:
-#         lambda wildcards: str(basedir / "envs" / f"{wildcards.tool}.yaml")
-#     shell:
-#         """
-#         export SCRIPT_DIR={params.script_dir}
-#         export OMP_NUM_THREADS={threads}
-#         export OPENBLAS_NUM_THREADS={threads}
-#         export MKL_NUM_THREADS={threads}
-#         export BLAS_NUM_THREADS={threads}
-#         MEM_KB=$(( {resources.mem_mb} * 1024 ))
-#         ulimit -v $MEM_KB
-#         /usr/bin/time -v -o {output.bench} \
-#         Rscript {params.script} \
-#             --ribo {input.ribo} \
-#             --rna {input.rna} \
-#             --samples {input.samples} \
-#             --out {output.csv} \
-#             &> {log}
-#         """
+rule run_benchmark2:
+    input:
+        unpack(lambda wildcards: get_input(wildcards, results="benchmark2"))
+    output:
+        # these are deleted? we only need the final output...
+        csv = expand("<results>/results/{tool}/results{n}.csv", n=range(N_PERM))
+    log:
+        "<results>/logs/{tool}.log"
+    pathvars:
+        results = "benchmark2"
+    wildcard_constraints:
+        tool="|".join(TOOLS_2)
+    params:
+        script_dir = basedir / "scripts",
+        script = lambda wildcards: basedir / "scripts" / f"permute_{wildcards.tool}.R",
+        n_perm = N_PERM
+    conda:
+        lambda wildcards: str(basedir / "envs" / f"{wildcards.tool}.yaml")
+    shell:
+        """
+        export SCRIPT_DIR={params.script_dir}
+        Rscript {params.script} \
+            --ribo {input.ribo} \
+            --rna {input.rna} \
+            --samples {input.samples} \
+            --out {output.csv} \
+            &> {log}
+        """

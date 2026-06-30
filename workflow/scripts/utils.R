@@ -11,6 +11,18 @@ parse_args <- function() {
   setNames(as.list(vals), keys)
 }
 
+msg_permute <- "permute_tool.R --ribo RIBO --rna RNA --samples SAMPLES --out OUT --alpha ALPHA --permutations N\n"
+keys_permute.expected <- c("alpha", "out", "permutations", "ribo", "rna", "samples")
+
+parse_args_permute <- function() {
+  args <- commandArgs(trailingOnly = TRUE)
+  if (length(args)!=12) { stop(msg_permute, call.=FALSE) }
+  keys <- sub("^--", "", args[seq(1, length(args), 2)])
+  if (!(identical(sort(keys), keys_permute.expected))) { stop(msg_permute, call.=FALSE) }
+  vals <- args[seq(2, length(args), 2)]
+  setNames(as.list(vals), keys)
+}
+
 msg_evaluation <- "run_evaluation.R --rna RNA --translation TRAN --abundance ABUN --buffering BUFF --results FILE1 FILE2 [FILE3, ...] --out OUT"
 keys_evaluation.expected <- c("abundance", "buffering", "out", "results", "rna", "translation")
 

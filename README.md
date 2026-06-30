@@ -1,12 +1,12 @@
 # Ribotools benchmark
 
-A workflow to benchmark tools for differential translation efficiency (TE) analysis and a companion repository to
+A workflow to benchmark tools for differential translation efficiency analysis (TEA) and a companion repository to
 
 > Rp-Bp and the Ribotools box for translatome profiling, Etienne Boileau, Maja Bencun, Francesca Tuorto, Isabel S. Naarmann-de Vries, Pauline Fahjen, Philipp Mertins, and Christoph Dieterich.
 
 ## Scope and documentation
 
-This repository is a supplementary companion, not a standalone package. It's key use case is to benchmark selected TE software tools using the simulated data from [Oertlin et al.](https://academic.oup.com/nar/article/47/12/e70/5423604) and a subset of the data from [Boileau et al.](https://zenodo.org/records/17899627). Although this is a well-documented space with plenty of published benchmarks, as of 2026, many tools have been deprecated and are now obsolete or unmaintained. A new wave of E2E software such as [Ribotools](https://ribotools.readthedocs.io) are now making the analysis of TE accessible, reproducible, and interpretable. For more details, results and discussion, consult the manuscript.
+This repository is a supplementary companion, not a standalone package. It's key use case is to benchmark selected TEA software tools using the simulated data from [Oertlin et al.](https://academic.oup.com/nar/article/47/12/e70/5423604) and a subset of the data from [Boileau et al.](https://zenodo.org/records/17899627). Although this is a well-documented space with plenty of published benchmarks, as of 2026, many tools have been deprecated and are now obsolete or unmaintained. A new wave of E2E software such as [Ribotools](https://ribotools.readthedocs.io) are now making the analysis of TE accessible, reproducible, and interpretable. For more details, results and discussion, consult the manuscript.
 
 ## Installation
 
@@ -48,4 +48,3 @@ Snakemake scheduling hints are set in a default profile under [workflow/profiles
 snakemake --profile workflow/profiles/default
 ```
 
-### Output

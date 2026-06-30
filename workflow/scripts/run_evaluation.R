@@ -37,10 +37,20 @@ suppressPackageStartupMessages({
 tool_files <- opts$results |>
   as.list() |>
   set_names(~ basename(dirname(.x)))
+  
+# hard coded - must match expected tool names
+tool_pretty_labels <- c(
+  anota2seq = "anota2seq",
+  riborex = "Riborex",
+  deltate = "deltaTE",
+  ribotools_lrt = "Ribotools (LRT)",
+  ribotools_dte = "RiboTools (dTE)"
+)
 
-# exclude tools that do not output classes for classification accuracy
+# hard coded - exclude tools that do not output classes for classification accuracy
 tool_to_exclude <- c("riborex")
 class_tools <- setdiff(names(tool_files), tool_to_exclude)
+class_tool_pretty_labels <- tool_pretty_labels[names(tool_pretty_labels) %in% class_tools]
 class_levels <- c("translation", "abundance", "buffering", "background")
 
 # test cases - self-explanatory
@@ -244,7 +254,12 @@ p_roc <- ggplot(roc_df, aes(x = fpr, y = tpr,
             inherit.aes = FALSE, hjust = 1, size = 2.6, fontface = "bold",
             show.legend = FALSE) +
   facet_wrap(~ test_label, nrow = 2, ncol = 2) +
-  scale_colour_manual(values = tool_colours, name = "Tool") +
+  scale_colour_manual(
+    values = tool_colours,
+    breaks = names(tool_colours),
+    labels = tool_pretty_labels,
+    name = "Tool"
+  ) +
   scale_x_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
                      expand = expansion(mult = 0.02)) +
   scale_y_continuous(breaks = c(0, 0.25, 0.5, 0.75, 1),
@@ -265,6 +280,7 @@ p_roc <- ggplot(roc_df, aes(x = fpr, y = tpr,
     panel.spacing = unit(0.5, 'cm'),
   ) +
   guides(colour = guide_legend(ncol = 1))
+
   
 ggsave(file.path(opts$out, "roc_curves.svg"), p_roc, width = 12, height = 9)
 ggsave(file.path(opts$out, "roc_curves.png"), p_roc, width = 12, height = 9)
@@ -288,7 +304,12 @@ p_bar <- ggplot(bar_df,
   geom_text(aes(label = sprintf("%.3f", auc), y = ci_upper),
             vjust = -0.4, size = 2.8, colour = "grey20") +
   facet_wrap(~ test_label, nrow = 2, ncol = 2) +
-  scale_fill_manual(values = tool_colours, guide = "none") +
+  scale_fill_manual(
+    values = tool_colours,
+    breaks = names(tool_colours),
+    labels = tool_pretty_labels,
+    name = "Tool"
+  ) +
   scale_y_continuous(
     limits = c(0, 1.10),
     breaks = c(0, 0.25, 0.5, 0.75, 1),
@@ -300,7 +321,8 @@ p_bar <- ggplot(bar_df,
   ) +
   theme_bw(base_size = 11) +
   theme(
-    axis.text.x = element_text(angle = 35, hjust = 1, size = 9),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
     strip.background = element_blank(),
     strip.text = element_text(face = "bold", size = 12),
     panel.grid.major.x = element_blank(),
@@ -388,7 +410,7 @@ p_cm <- ggplot(cm_long, aes(x = Truth, y = Predicted, fill = pct)) +
   geom_tile(colour = "white", linewidth = 0.5) +
   geom_text(aes(label = sprintf("%d\n(%.0f%%)", Freq, pct)),
               size = 2.8, lineheight = 1.1) +
-  facet_wrap(~ tool, ncol = length(class_tools)) +
+  facet_wrap(~ tool, ncol = length(class_tools), labeller = labeller(tool = class_tool_pretty_labels)) +
   scale_fill_gradientn(
     colours = c("white", "#FFF3B0", "#E09F3E", "#9E2A2B"),
     limits  = c(0, 100),
@@ -400,7 +422,8 @@ p_cm <- ggplot(cm_long, aes(x = Truth, y = Predicted, fill = pct)) +
   ) +
   theme_bw(base_size = 11) +
   theme(
-    axis.text.x = element_text(angle = 35, hjust = 1, size = 9),
+    axis.text.x = element_text(angle = 35, hjust = 1, size = 12, face = "bold"),
+    axis.text.y = element_text(size = 12, face = "bold"),
     strip.background = element_blank(),
     strip.text = element_text(face = "bold", size = 12),
     panel.grid = element_blank(),
@@ -429,7 +452,12 @@ p_metrics <- ggplot(metrics_long,
   geom_col(width = 0.65, alpha = 0.85, position = "dodge") +
   geom_hline(yintercept = 0, colour = "grey40", linewidth = 0.4) +
   facet_grid(metric ~ class, scales = "free_y") +
-  scale_fill_manual(values = classif_colours, name = "Tool") +
+  scale_fill_manual(
+    values = classif_colours,
+    breaks = names(classif_colours),
+    labels = class_tool_pretty_labels,
+    name = "Tool"
+  ) +
   scale_y_continuous(breaks = c(-0.5, 0, 0.25, 0.5, 0.75, 1)) +
   labs(
     x = NULL,
@@ -437,7 +465,8 @@ p_metrics <- ggplot(metrics_long,
   ) +
   theme_bw(base_size = 11) +
   theme(
-    axis.text.x = element_text(angle = 35, hjust = 1, size = 9),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
     strip.background = element_blank(),
     strip.text = element_text(face = "bold", size = 12),
     panel.grid.major.x = element_blank(),
