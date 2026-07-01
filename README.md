@@ -6,7 +6,9 @@ A workflow to benchmark tools for differential translation efficiency analysis (
 
 ## Scope and documentation
 
-This repository is a supplementary companion, not a standalone package. It's key use case is to benchmark selected TEA software tools using the simulated data from [Oertlin et al.](https://academic.oup.com/nar/article/47/12/e70/5423604) and a subset of the data from [Boileau et al.](https://zenodo.org/records/17899627). Although this is a well-documented space with plenty of published benchmarks, as of 2026, many tools have been deprecated and are now obsolete or unmaintained. A new wave of E2E software such as [Ribotools](https://ribotools.readthedocs.io) are now making the analysis of TE accessible, reproducible, and interpretable. For more details, results and discussion, consult the manuscript.
+This repository is a supplementary companion, not a standalone package. It's key use case is to benchmark selected TEA software tools using the simulated data from [Oertlin et al.](https://academic.oup.com/nar/article/47/12/e70/5423604) and a subset of the data from [Boileau et al.](https://zenodo.org/records/17899627).
+
+Until recently, this was a well-established field with numerous published benchmarks. However, as of 2026, many existing tools have been deprecated and are now obsolete or no longer actively maintained. A new generation of end-to-end (E2E) software, such as [Ribotools](https://ribotools.readthedocs.io), is making transcriptomics analysis more accessible, reproducible, and interpretable. For further details, results, and discussion, refer to the manuscript.
 
 ## Installation
 

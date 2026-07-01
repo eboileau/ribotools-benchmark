@@ -25,7 +25,7 @@ The class terminology is fixed according to the **anota2seq** labels. Hence, *tr
 
 The choice of effect size and score depends on the methodology and class, *e.g.* for **Ribotools**, we use the interaction fold change and adjusted p-value, except for features in the *forwarded* and *buffered* classes, where the RNA fold change and adjusted p-value are used. For **anota2seq**, we use the native classification, given by `singleRegMode` (`anota2seqGetOutput` with `output="singleDf"`), to assign corresponding values for `apvEff` and `apvRvmPAdj`. Riborex provides no classification; all significant features are assigned to the *translation* class. Non significant features are assigned to the *background* class.
 
-### Notes
+### Notes, assumptions, and limitations
 
 * We use defaults for all tools, except otherwise stated.
 * We use `fdr_threshold=0.1` and a default effect size of zero because neither **Riborex** nor the original implementation of the **deltaTE** method accept these parameters as input. DESeq2 is the default **Riborex** engine and is also used by **deltaTE**. In DESeq2, the default is to test that the log2 fold changes are equal to zero at a significance cutoff of 0.1.
@@ -53,3 +53,53 @@ The evaluation script should run if you add or remove tools, but keep the follow
 * Tools that do not output classes for classification accuracy must be excluded for part *B* (hard coded).
 * The figure layouts may have to be adjusted for a different number of tools (hard coded).
 
+
+## Benchmark 2
+
+This benchmark uses a subset of the data from [Boileau et al.](https://zenodo.org/records/17899627). Although no ground truth is available for this dataset, the results reported in the manuscript demonstrate a coherent and biologically consistent translational landscape, concordant with current knowledge of the system, providing a meaningful positive control for the presence of genuine signal.
+
+In a nutshell, labels are permuted to empirically characterize the false positive behavior of each tool under null conditions, *i.e.* when no true biological signal is present.
+
+Each tool is installed in its own environment and the *calling script* must accept the following arguments
+
+```bash
+permute_tool.R --ribo RIBO --rna RNA --samples SAMPLES --out OUT --alpha ALPHA
+```
+
+Only these arguments are allowed. The values of `--ribo` `--rna`, and `--samples` are specified in the configuration file by `ribo`, `rna`, and `samples`, respectively, under `data`. The value of `--alpha` is the FDR threshold, given as `fdr_threshold` in the configuration file under `params`.
+
+The output must be a csv table with the following columns
+
+| Column name  | Description |
+| ------------- | ------------- |
+| tool  | tool name  |
+| iteration  | permutation number  |
+| perm_cols | permutation |
+| n_sig_te | number of significant genes (adjusted p-value) at a given FDR (TE) |
+| n_sig_ribo | number of significant genes (adjusted p-value) at a given FDR (RIBO) |
+| n_sig_rna | number of significant genes (adjusted p-value) at a given FDR (RNA) |
+| n_tested_te | number of tested genes (TE) |
+| n_tested_ribo | number of tested genes (RIBO) |
+| n_tested_rna | number of tested genes (RNA) |
+
+
+### Notes, assumptions, and limitations
+
+* This dataset contains n = 2 replicates per condition, representing a realistic *life science experiment*, where having only two biological replicates per condition is common. To exclude tools such as **anota2seq**, that cannot handle less than three replicates with two conditions, use the `exclude` list under `params` in the configuration file.
+* With n = 2, DESeq2-based tools can produce conservative p-value distributions due to dispersion shrinkage, resulting in zero significant genes even under the null. This is a general limitation of the model, and not a failure of the tool itself.
+* With n = 2, only 4 valid permutations exist. Permutations are applied identically to both the Ribo-seq and RNA-seq count matrices to preserve inter-assay pairing.
+* Tools returning only a single ranked list without separable RFP *i.e.* RIBO, RNA, and TE components are evaluated on the TE output only.
+* The `n_tested` denominator for FPR calculation is the number of genes with non-NA adjusted p-values, reflecting the tool's internal filtering behaviour; *e.g.* genes assigned padj = 1 after NA replacement are excluded from the denominator.
+
+
+### Evaluation
+
+This script is called with the following arguments
+
+```bash
+permute_evaluation.R --results FILE1 FILE2 [FILE3, ...] --out OUT
+```
+
+where `--results` is a list of csv tables with expected columns (see above), one per tool tested.
+
+* The number of genes called significant at a given FDR is recorded per permutation for each test, and the empirical false positive rate is computed as the proportion of significantly called genes among those tested.

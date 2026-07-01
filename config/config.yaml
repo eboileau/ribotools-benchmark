@@ -31,11 +31,10 @@ params:
     fdr_threshold: 0.1
   benchmark2:
     fdr_threshold: 0.05
-    n_permutations: 50
     # tools to exclude
     exclude:
       - anota2seq # n>3 required
-      - riborex # deprecated
+      - riborex # no FDR, deprecated
       - deltate # ~ribotools_dte
       - ribotools_dte # ~ribotools_lrt
 

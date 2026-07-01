@@ -10,19 +10,12 @@ TOOLS_1= config["tools"]
 TOOLS_2 = [t for t in TOOLS_1 if t not in config["params"]["benchmark2"]["exclude"]]
 BENCHMARKS = config["benchmarks"]
 
-N_PERM = config["params"]["benchmark2"]["n_permutations"]
-
 def get_input(wildcards, results):
     return {
         "ribo": basedir.parent / config["data"][results]["ribo"],
         "rna": basedir.parent / config["data"][results]["rna"],
         "samples": basedir.parent / config["data"][results]["samples"],
     }
-
-# rule all:
-#     input:
-#         expand("{benchmark}/results/{tool}/results.txt", tool=TOOLS_1, benchmark=BENCHMARKS),
-#         expand("{benchmark}/results/{tool}/benchmark.txt", tool=TOOLS_1, benchmark=BENCHMARKS)
 
 rule all:
     input:
@@ -110,8 +103,7 @@ rule run_benchmark2:
     input:
         unpack(lambda wildcards: get_input(wildcards, results="benchmark2"))
     output:
-        # these are deleted? we only need the final output...
-        csv = expand("<results>/results/{tool}/results{n}.csv", n=range(N_PERM))
+        csv = "<results>/results/{tool}/results.csv"
     log:
         "<results>/logs/{tool}.log"
     pathvars:
@@ -119,18 +111,40 @@ rule run_benchmark2:
     wildcard_constraints:
         tool="|".join(TOOLS_2)
     params:
+        fdr = config["params"]["benchmark2"]["fdr_threshold"],
         script_dir = basedir / "scripts",
         script = lambda wildcards: basedir / "scripts" / f"permute_{wildcards.tool}.R",
-        n_perm = N_PERM
     conda:
         lambda wildcards: str(basedir / "envs" / f"{wildcards.tool}.yaml")
     shell:
         """
         export SCRIPT_DIR={params.script_dir}
-        Rscript {params.script} \
+        Rscript --vanilla {params.script} \
             --ribo {input.ribo} \
             --rna {input.rna} \
             --samples {input.samples} \
             --out {output.csv} \
-            &> {log}
+            --alpha {params.fdr} &> {log}
+        """
+
+rule evaluate_benchmark2:
+    input:
+        csvs = expand("<results>/results/{tool}/results.csv", tool=TOOLS_2)
+    output:
+        summary = "<results>/evaluation/results.csv",
+    log:
+        "<results>/logs/evaluation.log"
+    pathvars:
+        results = "benchmark2"
+    params:
+        script_dir = basedir / "scripts",
+        script = basedir / "scripts" / "permute_evaluation.R"
+    conda:
+        basedir / "envs" / "evaluation.yaml"
+    shell:
+        """
+        export SCRIPT_DIR={params.script_dir}
+        Rscript --vanilla {params.script} \
+            --results {input.csvs} \
+            --out {output.summary} &> {log}
         """

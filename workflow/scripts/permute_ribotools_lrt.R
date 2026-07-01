@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript --vanilla
 
 source(file.path(Sys.getenv("SCRIPT_DIR"), "utils.R"))
-opts <- parse_args_permute()
+opts <- parse_args()
 
 library(yaml)
 library(openxlsx)
@@ -21,10 +21,26 @@ contrast_list[[contrast_key]] <- c(conditions[2], conditions[1])
 
 alpha <- as.numeric(opts$alpha)
 
+# define allowed permutations 
+enumerate_col_perms <- function(samples) {
+  # one assay to define the valid permutations
+  condition <- as.character(samples$condition[samples$assay=="ribo"])
+  lvls <- levels(as.factor(condition))
+  n <- length(condition)
+  n_ctrl <- sum(condition == lvls[1])
+  # which column indices get "control"
+  all_combn <- combn(n, n_ctrl, simplify = FALSE)
+  # remove original assignment
+  valid <- Filter(function(x) !setequal(x, which(condition == lvls[1])), all_combn)
+  valid <- Filter(function(x) !setequal(x, which(condition == lvls[2])), valid)  
+  # full column permutation orders
+  lapply(valid, function(idx) {
+    c(idx, setdiff(seq_len(n), idx))
+  })
+}
+
 # calling 
-run_ribotools <- function(seed) {
-  set.seed(seed)
-  perm_cols <- sample(ncol(ribo))
+run_ribotools <- function(perm_cols, iter) {
   ribo_perm <- ribo[, perm_cols]
   rna_perm  <- rna[, perm_cols]
   colnames(ribo_perm) <- colnames(ribo)
@@ -32,7 +48,7 @@ run_ribotools <- function(seed) {
   # write data...
   merge <- cbind(ribo_perm, rna_perm)
   output_dir <- dirname(opts$out)
-  count_file <-  file.path(output_dir, paste0("counts", seed, ".csv"))
+  count_file <-  file.path(output_dir, paste0("counts", iter, ".csv"))
   write.csv(merge, count_file, row.names = TRUE, quote = FALSE)
   # ... and config
   cfg <- list(
@@ -41,12 +57,12 @@ run_ribotools <- function(seed) {
     sample_table = opts$samples,
     count_table = count_file
   )
-  yaml_file <- file.path(output_dir, paste0("config", seed, ".yaml"))
+  yaml_file <- file.path(output_dir, paste0("config", iter, ".yaml"))
   write_yaml(cfg, yaml_file)
   # call Ribotools using default lfcThreshold
   status <- system2(
     "run-tea",
-    args = c("--method", method, "--alpha", alpha, "--delim", "CSV", yaml_file),
+    args = c("--method", method, "--alpha", alpha, "--lfcThreshold", 0, "--delim", "CSV", yaml_file),
     stdout = FALSE,
     stderr = FALSE
   )
@@ -57,11 +73,14 @@ run_ribotools <- function(seed) {
   res <- read.xlsx(file.path(output_dir, method, contrast_key, paste0(contrast_key, ".xlsx")))
   df <- data.frame(
     tool = "ribotools_lrt",
-    iteration = seed,
+    iteration = iter,
+    perm_cols = paste(perm_cols, collapse=";"),
     n_sig_te = sum(res$padj.dte < alpha, na.rm = TRUE),
     n_sig_ribo = sum(res$padj.ribo < alpha, na.rm = TRUE),
     n_sig_rna = sum(res$padj.rna < alpha, na.rm = TRUE),
-    n_tested = sum(!is.na(res)),
+    n_tested_te = sum(!is.na(res$pvalue.dte)),
+    n_tested_ribo = sum(!is.na(res$pvalue.ribo)),
+    n_tested_rna = sum(!is.na(res$pvalue.rna)),
     stringsAsFactors = FALSE
   )
   # force clean...
@@ -70,6 +89,9 @@ run_ribotools <- function(seed) {
   df
 }
 
-res <- lapply(seq_len(opts$permutations), run_ribotools)
+valid_perms <- enumerate_col_perms(samples)
+res <- lapply(seq_along(valid_perms), function(idx) {
+  run_ribotools(perm_cols=valid_perms[[idx]], iter=idx)
+})
 out <- do.call(rbind, res)
 write.csv(out, opts$out, row.names = FALSE, quote = FALSE)
